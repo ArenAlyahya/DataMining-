@@ -1,0 +1,112 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(knitr)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tibble)
+library(stringr)
+library(gridExtra)
+library(scales)
+library(lubridate)
+library(ggrepel)
+library(reshape2)
+#install.packages('kableExtra')
+library(kableExtra)
+#install.packages('tm')
+library(tm)
+library(wordcloud)
+library(tidytext)
+library(broom)
+library(topicmodels)
+
+tweets_debate1 <- read_csv("tweets_debate1.csv")
+users <- read_csv("users.csv")
+#View(users)
+#View(tweets_debate1)
+
+#plot(cars)
+
+```
+
+```{r}
+CleanCorpus <- function(x){
+     x <- tm_map(x, content_transformer(tolower))
+     x <- tm_map(x, removeNumbers) #remove numbers before removing words. Otherwise "trump2016" leaves "trump"
+     x <- tm_map(x, removeWords, tidytext::stop_words$word)
+     x <- tm_map(x, removePunctuation)
+     x <- tm_map(x, stripWhitespace)
+     return(x)
+}
+```
+
+```{r}
+
+text.t <- str_replace_all(tweets_debate1$text, "[\n]" , "") #remove new lines
+text.t <- str_replace_all(text.t, "&amp", "") # rm ampersand
+
+#URLs are always at the end and did not counts towards the 140 characters limit
+text.t <- str_replace_all(text.t, "http.*" , "")
+
+text.t <- iconv(text.t, "latin1", "ASCII", sub="")
+```
+
+```{r}
+#https://cran.r-project.org/web/packages/tm/vignettes/tm.pdf
+docs <- text.t[1:250]
+docs <- VectorSource(docs)
+docs <- VCorpus(docs)
+```
+
+
+```{r}
+#text.t <- tweets_debate1$text
+#text.t[4]
+docs <- CleanCorpus(docs)
+docs[[1]]$content
+```
+
+
+```{r}
+RemoveNames <- function(x) {
+       x <- tm_map(x, removeWords, c("donald", "hillary", "clinton", "trump", "realdonaldtrump", "hillaryclinton"))
+       return(x)
+}
+```
+
+
+```{r}
+CreateTermsMatrix <- function(x) {
+        x <- TermDocumentMatrix(x)
+        x <- as.matrix(x)
+        y <- rowSums(x)
+        y <- sort(y, decreasing=TRUE)
+        return(y)
+}
+
+TermFreqdocs <- CreateTermsMatrix(docs)
+
+```
+
+
+```{r}
+content(docs[[1]])
+TermFreqdocs
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
